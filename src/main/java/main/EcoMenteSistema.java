@@ -69,7 +69,7 @@ public class EcoMenteSistema {
                 }
 
             } while (opcao != 0);
-            System.out.println("Obrigado por usar o EcoMente!\nCriado por Grupo 10 - 2025");
+            System.out.println("Obrigado por usar o EcoMente!\nCriado por EcoMentes- 2025");
         } catch (Exception e) {
             System.err.println("Ocorreu um erro inesperado: " + e.getMessage());
         } finally {
