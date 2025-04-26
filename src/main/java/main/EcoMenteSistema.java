@@ -27,7 +27,6 @@ public class EcoMenteSistema {
                 System.out.print("Digite seu telefone: ");
                 String telefone = scn.nextLine();
 
-                // Verificar se já existe empresa com esse nome
                 Empresas empresaExistente = DatabaseConnector.buscarEmpresaPorNome(nome);
                 if (empresaExistente == null) {
                     DatabaseConnector.registrarEmpresas(nome, cnpj, telefone);
@@ -45,12 +44,11 @@ public class EcoMenteSistema {
                 System.out.println("0 - Sair");
                 System.out.print("Escolha uma opção: ");
 
-                // Tenta converter a entrada para inteiro
                 try {
                     opcao = Integer.parseInt(scn.nextLine());
                 } catch (NumberFormatException e) {
                     System.out.println("Por favor, digite apenas números.");
-                    opcao = -1; // Voltar para o menu
+                    opcao = -1;
                 }
 
                 switch (opcao) {
@@ -71,7 +69,7 @@ public class EcoMenteSistema {
                 }
 
             } while (opcao != 0);
-
+            System.out.println("Obrigado por usar o EcoMente!\nCriado por Grupo 10 - 2025");
         } catch (Exception e) {
             System.err.println("Ocorreu um erro inesperado: " + e.getMessage());
         } finally {
