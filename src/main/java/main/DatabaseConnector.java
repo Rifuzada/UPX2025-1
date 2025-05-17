@@ -1,14 +1,19 @@
 package main;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 
 // Criar Função para verificar empresas - dependendo do banco de dados - Empresas tabela -- completo
 // Criar Função para buscar Lançamento de descartes - dependendo do banco de dados - Lançamentos tabela -- completo
 // Criar Função para visualizar relatorios(Substituido pela view) - Materiais mais descartados, etc - Acesso a view -- completo
 // Criar Função para listar os pontos de coletas - PontoColeta - latitude e longitude -- completo
-// Criar Função para registrar relatorio - Novo relatorio - precisaria de nome, ponto de coleta, material, quantidade
-// Decidir se vai manter a pontuacao/recomepensa
-// Adicionar Overloading para visualizarRelatorios - por empresa 
+// Criar Função para registrar relatorio - Novo relatorio - precisaria de nome, ponto de coleta, material, quantidade -- completo
+// Decidir se vai manter a pontuacao/recomepensa -- decidido ; nao manter
+// Adicionar Overloading para visualizarRelatorios - por empresa  -- completo
 
 public class DatabaseConnector {
 
@@ -25,6 +30,25 @@ public class DatabaseConnector {
         try (Connection conn = getConnection(); // conecta com banco de dados
                 Statement stmt = conn.createStatement(); // verifica banco de dados
                 ResultSet rs = stmt.executeQuery(sql)) {// executa codigo sql
+            System.out.println("--- Relatorios de descartes ---");
+            while (rs.next()) {
+                System.out.println("Data de descarte: " + rs.getString("data_lancamento"));
+                System.out.println("Nome da empresa: " + rs.getString("nome_empresa"));
+                System.out.println("Nome do material: " + rs.getString("nome_material"));
+                System.out.println("Quantidade: " + rs.getString("quantidade") + "kg");
+                System.out.println("Nome do ponto de descarte: " + rs.getString("nome_ponto"));
+                System.out.println("-----------------------------");
+            }
+        } catch (SQLException e) {
+            System.err.println("Erro ao listar Empresas: " + e.getMessage());
+        }
+    }
+    public static void visualizarRelatorios(String nome_empresa) {
+        String sql = "SELECT data_lancamento, nome_empresa, nome_material,quantidade,nome_ponto FROM vw_LancamentosDescarte WHERE nome_empresa = ?";
+        try (Connection conn = getConnection(); // conecta com banco de dados
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {// executa codigo sql
+            pstmt.setString(1, nome_empresa);
+            ResultSet rs = pstmt.executeQuery();
             System.out.println("--- Relatorios de descartes ---");
             while (rs.next()) {
                 System.out.println("Data de descarte: " + rs.getString("data_lancamento"));
@@ -114,21 +138,81 @@ public class DatabaseConnector {
         return null;
     }
 
-    // public static void adicionarPontuacao(String email, int pontos) {
-    // String sql = "UPDATE Usuarios SET Pontuacao = Pontuacao + ? WHERE Email = ?";
-    // try (Connection conn = getConnection();
-    // PreparedStatement pstmt = conn.prepareStatement(sql)) {
-    // pstmt.setInt(1, pontos);
-    // pstmt.setString(2, email);
-    // int affectedRows = pstmt.executeUpdate();
-    // if (affectedRows > 0) {
-    // System.out.println("Pontuação adicionada com sucesso para a Empresa: " +
-    // email);
-    // } else {
-    // System.out.println("Empresa não encontrada.");
-    // }
-    // } catch (SQLException e) {
-    // System.err.println("Erro ao adicionar pontuação: " + e.getMessage());
-    // }
-    // }
+    public static Integer buscarIdPorNome(Connection conn, String tabela, String nome) throws SQLException {
+        String idColuna;
+        String nomeColuna;
+        String tabelaOriginal;
+
+        switch (tabela.toLowerCase()) {
+            case "empresas" -> {
+                idColuna = "id_empresa";
+                nomeColuna = "nome_empresa";
+                tabelaOriginal = "Empresas";
+            }
+            case "pontos" -> {
+                idColuna = "id_ponto";
+                nomeColuna = "nome_ponto";
+                tabelaOriginal = "PontosDescartes";
+            }
+            case "materiais" -> {
+                idColuna = "id_material";
+                nomeColuna = "nome_material";
+                tabelaOriginal = "Materiais";
+            }
+            default -> throw new IllegalArgumentException("Tabela desconhecida: " + tabela);
+        }
+
+        // Busca na view
+        String sqlView = "SELECT DISTINCT " + idColuna + " FROM vw_LancamentosDescarte WHERE UPPER(" + nomeColuna + ") = UPPER(?)";
+        try (PreparedStatement pstmt = conn.prepareStatement(sqlView)) {
+            pstmt.setString(1, nome);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        }
+
+        // Busca na tabela original
+        String sqlTabela = "SELECT " + idColuna + " FROM " + tabelaOriginal + " WHERE UPPER(nome) = UPPER(?)";
+        try (PreparedStatement pstmt = conn.prepareStatement(sqlTabela)) {
+            pstmt.setString(1, nome);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        }
+
+        return null;
+    }
+
+    public static void registrarRelatorio(String nome_empresa, String nome_ponto, String nome_material, double quantidade) {
+        String insertSql = "INSERT INTO LancamentosDescarte (data_lancamento, id_empresa, id_ponto, id_material, quantidade) VALUES (GETDATE(), ?, ?, ?, ?)";
+        try (Connection conn = getConnection()) {
+            Integer idEmpresa = buscarIdPorNome(conn, "Empresas", nome_empresa);
+            Integer idPonto = buscarIdPorNome(conn, "Pontos", nome_ponto);
+            Integer idMaterial = buscarIdPorNome(conn, "Materiais", nome_material);
+
+            if (idEmpresa == null || idPonto == null || idMaterial == null) {
+                System.out.println("Erro: Nome de empresa, ponto ou material não encontrado no banco.");
+                return;
+            }
+
+            try (PreparedStatement pstmt = conn.prepareStatement(insertSql)) {
+                pstmt.setInt(1, idEmpresa);
+                pstmt.setInt(2, idPonto);
+                pstmt.setInt(3, idMaterial);
+                pstmt.setDouble(4, quantidade);
+
+                int affectedRows = pstmt.executeUpdate();
+                if (affectedRows > 0) {
+                    System.out.println("Relatório registrado com sucesso!");
+                } else {
+                    System.out.println("Falha ao registrar o relatório.");
+                }
+            }
+
+        } catch (SQLException e) {
+            System.err.println("Erro ao registrar relatório: " + e.getMessage());
+        }
+    }
 }

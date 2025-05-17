@@ -1,23 +1,19 @@
 package main;
 
+import java.io.FileDescriptor;
+import java.io.FileOutputStream;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 
 public class EcoMenteSistema {
-    // public static void registrarAcaoEmpresa(Empresas empresa, String tipoAcao) {
-    // if (tipoAcao.equalsIgnoreCase("descartou")) {
-    // int pontosParaAdicionar = 10;
-    // DatabaseConnector.adicionarPontuacao(empresa.email, pontosParaAdicionar);
-    // empresa.pontuacao += pontosParaAdicionar;
-    // }
-    // }
-
     public static void main(String[] args) {
-        Scanner scn = new Scanner(System.in);
-        try {
+        try (Scanner scn = new Scanner(System.in)) {
+            System.setOut(new PrintStream(new FileOutputStream(FileDescriptor.out), true, StandardCharsets.UTF_8));
             System.out.print("Deseja se registrar? (s/n): ");
-            String resposta = scn.nextLine();
+            String resposta = scn.nextLine().toLowerCase();
 
-            if (resposta.equalsIgnoreCase("s")) {
+            if (resposta.equals("s")) {
                 System.out.print("Digite o nome da empresa: ");
                 String nome = scn.nextLine();
 
@@ -41,6 +37,7 @@ public class EcoMenteSistema {
                 System.out.println("1 - Visualizar Relatórios");
                 System.out.println("2 - Listar Empresas");
                 System.out.println("3 - Listar Pontos de Coleta");
+                System.out.println("4 - Registrar Ação");
                 System.out.println("0 - Sair");
                 System.out.print("Escolha uma opção: ");
 
@@ -53,13 +50,32 @@ public class EcoMenteSistema {
 
                 switch (opcao) {
                     case 1:
-                        DatabaseConnector.visualizarRelatorios();
+                        System.out.println("Deseja buscar Algum relatorio especifico? (s/n)");
+                        resposta = scn.nextLine().toLowerCase();
+                        if (resposta.equals("s")) {
+                            System.out.print("Digite o nome da empresa: ");
+                            String nome = scn.nextLine();
+                            DatabaseConnector.visualizarRelatorios(nome);
+                        } else {
+                            DatabaseConnector.visualizarRelatorios();
+                        }
                         break;
                     case 2:
                         DatabaseConnector.listarEmpresas();
                         break;
                     case 3:
                         DatabaseConnector.listarPontos();
+                        break;
+                    case 4:
+                        System.out.print("Digite o nome da empresa: ");
+                        String nome = scn.nextLine();
+                        System.out.print("Digite o ponto de coleta: ");
+                        String pontoColeta = scn.nextLine();
+                        System.out.print("Digite o material: ");
+                        String material = scn.nextLine();
+                        System.out.print("Digite a quantidade: ");
+                        int quantidade = Integer.parseInt(scn.nextLine());
+                        DatabaseConnector.registrarRelatorio(nome, pontoColeta, material, quantidade);
                         break;
                     case 0:
                         System.out.println("Encerrando o programa...");
@@ -72,8 +88,6 @@ public class EcoMenteSistema {
             System.out.println("Obrigado por usar o EcoMente!\nCriado por EcoMentes- 2025");
         } catch (Exception e) {
             System.err.println("Ocorreu um erro inesperado: " + e.getMessage());
-        } finally {
-            scn.close();
         }
     }
 }
